@@ -1,0 +1,23 @@
+﻿@inherits LayoutComponentBase
+<div class="app-container">
+    @* --- TOP NAVIGATION BAR --- *@
+    <header class="top-bar">
+        <div class="logo">
+            <span class="dna-icon">🧬</span> Helix.NET
+        </div>
+        <nav class="nav-links">
+            <a href="/">New Alignment</a>
+            <a href="/jobs">Job History</a>
+        </nav>
+    </header>
+
+    @* --- MAIN CONTENT AREA --- *@
+    <main class="main-content">
+        @Body
+    </main>
+
+    @* --- FOOTER --- *@
+    <footer class="app-footer">
+        Helix.NET Bioinformatics Compute Cluster &copy; @DateTime.Now.Year
+    </footer>
+</div>

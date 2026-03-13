@@ -1,0 +1,93 @@
+﻿@page "/"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<PageTitle>Helix.NET Dashboard</PageTitle>
+
+<h1>🧬 Helix.NET Sequence Aligner</h1>
+<hr />
+
+@* --- 1. THE INPUT UI --- *@
+<div style="display: flex; gap: 20px; margin-bottom: 20px;">
+    <div style="flex: 1;">
+        <label><strong>Sequence A (Reference):</strong></label><br />
+        <textarea @bind="_sequenceA" rows="5" style="width: 100%; font-family: monospace;" placeholder="Paste genomic sequence here..."></textarea>
+    </div>
+    <div style="flex: 1;">
+        <label><strong>Sequence B (Query):</strong></label><br />
+        <textarea @bind="_sequenceB" rows="5" style="width: 100%; font-family: monospace;" placeholder="Paste genomic sequence here..."></textarea>
+    </div>
+</div>
+
+<button @onclick="LaunchAlignmentJob" disabled="@_isProcessing" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px;">
+    @if (_isProcessing)
+    {
+        <span>⏳ Processing...</span>
+    }
+    else
+    {
+        <span>🚀 Launch Alignment Job</span>
+    }
+</button>
+
+@* --- 2. THE STATUS UPDATER --- *@
+<div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #007bff;">
+    <strong>System Status:</strong> @_statusMessage
+</div>
+
+@code {
+
+    private string _sequenceA = "GATTACA", _sequenceB = "GCATGCU";
+    private string _statusMessage = "Standing by for sequence input.";
+    private bool _isProcessing = false;
+    
+    public record AlignmentRequest(string SequenceA, string SequenceB);
+
+    public class JobResponse
+    {
+        public Guid Id { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int? FinalScore { get; set; }
+        public string? AlignedSequenceA { get; set; }
+        public string? AlignedSequenceB { get; set; }
+    }
+
+    private async Task LaunchAlignmentJob()
+    {
+        // 1. Reset the UI state
+        _isProcessing = true;
+        _statusMessage = "Transmitting sequences...";
+        
+        // Tell Blazor to redraw UI
+        StateHasChanged();
+
+        try
+        {
+            var payload = new AlignmentRequest(_sequenceA, _sequenceB);
+            string apiUrl = "https://localhost:7096/api/v1/align/jobs";
+            var postResponse = await Http.PostAsJsonAsync(apiUrl, payload);
+
+            if (!postResponse.IsSuccessStatusCode)
+            {
+                _statusMessage = "Network Error: API rejected payload.";
+                _isProcessing = false;
+                return;
+            }
+
+            var initialJob = await postResponse.Content.ReadFromJsonAsync<JobResponse>();
+
+            if (initialJob == null) return;
+
+            Nav.NavigateTo($"/jobs/{initialJob.Id}");
+        }
+        catch (Exception e)
+        {
+            _statusMessage = $"CRITICAL FAILURE: {e.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}

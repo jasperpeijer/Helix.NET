@@ -1,0 +1,87 @@
+﻿@page "/jobs/{Id:guid}"
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<PageTitle>Job Details - Helix.NET</PageTitle>
+
+<div style="margin-bottom: 20px;">
+    <h1>Alignment Job Details</h1>
+    <p style="font-family: monospace; color: #666;">Tracking ID: @Id</p>
+</div>
+
+@if (_job == null || _job.Status == "Pending" || _job.Status == "Processing")
+{
+    <div style="padding: 20px; background-color: #f8f9fa; border-left: 4px solid #007bff;">
+        <strong>System Status:</strong> @_statusMessage
+    </div>
+}
+else if (_job.Status == "Completed")
+{
+    <div style="padding: 20px; background-color: #e9ecef; border-radius: 8px;">
+        <h2 style="color: #28a745;">Alignment Complete (Score: @_job.FinalScore)</h2>
+        <div style="font-family: monospace; white-space: pre; font-size: 16px; letter-spacing: 2px; background: #fff; padding: 15px; border: 1px solid #ccc; overflow-x: auto;">
+            <div style="white-space: pre; color: #0056b3;">@_job.AlignedSequenceA</div>
+            <div style="white-space: pre; color: #0056b3;">@_job.AlignedSequenceB</div>
+        </div>
+    </div>
+}
+else if (_job.Status == "Failed")
+{
+    <div style="padding: 20px; background-color: #f8d7da; border-left: 4px solid #dc3545;">
+        <strong>System Error:</strong> The alignment engine failed to process this sequence.
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private JobResponse? _job;
+    private string _statusMessage = "Connecting to compute cluster...";
+    
+    public class JobResponse
+    {
+        public Guid Id { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int? FinalScore { get; set; }
+        public string? AlignedSequenceA { get; set; }
+        public string? AlignedSequenceB { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        string apiUrl = "https://localhost:7096/api/v1/align/jobs";
+        
+        while (true)
+        {
+            try
+            {
+                _job = await Http.GetFromJsonAsync<JobResponse>($"{apiUrl}/{Id}");
+
+                if (_job == null)
+                {
+                    _statusMessage = "Error: Job not found in the database.";
+                    break;
+                }
+                else if (_job.Status == "Failed")
+                {
+                    _statusMessage = "Error: Job failed to process this sequence.";
+                    break;
+                }
+                else if (_job.Status == "Pending" || _job.Status == "Processing")
+                {
+                    _statusMessage = $"Job is {_job.Status.ToLower()}. Refreshing every 5 seconds...";
+                    StateHasChanged();
+                }
+            }
+            catch (HttpRequestException)
+            {
+                _statusMessage = "Error: Job not found in the database.";
+                break;
+            }
+
+            await Task.Delay(5);
+        }
+
+    }
+
+}
