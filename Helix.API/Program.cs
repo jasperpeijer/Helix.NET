@@ -64,6 +64,23 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] AlignmentRequest request, He
 .WithName("SubmitAlignmentJob")
 .WithOpenApi();
 
+app.MapGet("/api/v1/align/jobs", async (HelixDbContext db) =>
+{
+    return await db.GenomicJobs
+        .OrderByDescending(job => job.CreatedAt)
+        .Select(job => new
+        {
+            job.Id,
+            job.Status,
+            job.CreatedAt,
+            job.CompletedAt,
+            job.FinalScore
+        })
+        .ToListAsync();
+})
+.WithName("GetAlignmentJobs")
+.WithOpenApi();
+
 // GET: Check the status of a specific job
 app.MapGet("/api/v1/align/jobs/{id:guid}", async (Guid id, HelixDbContext db) =>
 {

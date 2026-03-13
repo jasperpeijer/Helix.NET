@@ -1,0 +1,110 @@
+﻿@page "/jobs"
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Job History - Helix.NET</PageTitle>
+
+<div style="padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1>Job History</h1>
+        <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/")'>+ New Alignment</button>
+    </div>
+    
+    @if (_jobs == null)
+    {
+        <div class="alert alert-info">Scanning database for records...</div>
+    }
+    else if (!_jobs.Any())
+    {
+        <div class="card" style="padding: 40px; text-align: center; background: #f9f9f9;">
+            <h3>No jobs found.</h3>
+            <p>Start your first genomic alignment to see it appear here.</p>
+        </div>
+    }
+    else
+    {
+        <table class="table table-hover" style="background: white; border-radius: 8px; overflow: hidden; border: 1px solid #dee2e6;">
+            <thead style="background: #f8f9fa;">
+                <tr>
+                    <th>Date Created</th>
+                    <th>Date Completed</th>
+                    <th>Job ID</th>
+                    <th>Status</th>
+                    <th>Final Score</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var job in _jobs)
+                {
+                    <tr>
+                        <td style="vertical-align: middle;">@job.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                        <td style="vertical-align: middle;">@(job.CompletedAt?.ToString("MMM dd, yyyy HH:mm") ?? "Not finished yet")</td>
+                        <td style="vertical-align: middle; max-width: 120px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-family: monospace; color: #666;">@job.Id.ToString().Substring(0, 8)...</span>
+                                <button class="btn btn-link p-0" 
+                                        title="Copy Full ID" 
+                                        @onclick="@(() => CopyToClipboard(job.Id.ToString()))">
+                                    <small>📋</small>
+                                </button>
+                            </div>
+                        </td>
+                        <td style="vertical-align: middle;">
+                            <span class="badge @GetStatusClass(job.Status)">@job.Status</span>
+                        </td>
+                        <td style="vertical-align: middle;">@(job.FinalScore?.ToString() ?? "N/A")</td>
+                        <td style="text-align: right;">
+                            <button class="btn btn-outline-primary btn-sm" @onclick="() => ViewJob(job.Id)">
+                                View Results
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<JobSummary>? _jobs;
+
+    public class JobSummary
+    {
+        public Guid Id { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
+        public int? FinalScore { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _jobs = await Http.GetFromJsonAsync<List<JobSummary>>("https://localhost:7096/api/v1/align/jobs");
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error fetching jobs: {e.Message}");
+        }
+    }
+
+    private void ViewJob(Guid Id) => Nav.NavigateTo($"/jobs/{Id}");
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "Completed" => "bg-success",
+        "Failed" => "bg-danger",
+        "Processing" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    private async Task CopyToClipboard(string text)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+}
