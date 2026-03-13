@@ -19,7 +19,7 @@ else if (_job.Status == "Completed")
 {
     <div style="padding: 20px; background-color: #e9ecef; border-radius: 8px;">
         <h2 style="color: #28a745;">Alignment Complete (Score: @_job.FinalScore)</h2>
-        <div style="font-family: monospace; white-space: pre; font-size: 16px; letter-spacing: 2px; background: #fff; padding: 15px; border: 1px solid #ccc; overflow-x: auto;">
+        <div style="font-family: monospace; font-size: 16px; letter-spacing: 2px; background: #fff; padding: 15px; border: 1px solid #ccc; overflow-x: auto;">
             <div style="white-space: pre; color: #0056b3;">@_job.AlignedSequenceA</div>
             <div style="white-space: pre; color: #0056b3;">@_job.AlignedSequenceB</div>
         </div>
@@ -62,12 +62,20 @@ else if (_job.Status == "Failed")
                     _statusMessage = "Error: Job not found in the database.";
                     break;
                 }
-                else if (_job.Status == "Failed")
+
+                if (_job.Status == "Completed")
+                {
+                    StateHasChanged();
+                    break;
+                }
+                
+                if (_job.Status == "Failed")
                 {
                     _statusMessage = "Error: Job failed to process this sequence.";
                     break;
                 }
-                else if (_job.Status == "Pending" || _job.Status == "Processing")
+                
+                if (_job.Status == "Pending" || _job.Status == "Processing")
                 {
                     _statusMessage = $"Job is {_job.Status.ToLower()}. Refreshing every 5 seconds...";
                     StateHasChanged();
@@ -79,7 +87,7 @@ else if (_job.Status == "Failed")
                 break;
             }
 
-            await Task.Delay(5);
+            await Task.Delay(5000);
         }
 
     }
