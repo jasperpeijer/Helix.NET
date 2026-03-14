@@ -53,6 +53,13 @@ public class AlignmentWorker : BackgroundService
                     job.FinalScore = result.Score;
                     job.AlignedSequenceA = result.AlignedRow;
                     job.AlignedSequenceB = result.AlignedCol;
+                    
+                    // Metrics
+                    job.IdentityPercentage = result.IdentityPercentage;
+                    job.Matches = result.Matches;
+                    job.Mismatches = result.Mismatches;
+                    job.Gaps = result.Gaps;
+                    
                     job.Status = "Completed";
                     job.CompletedAt = DateTime.UtcNow;
                     

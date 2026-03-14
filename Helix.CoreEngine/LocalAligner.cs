@@ -77,6 +77,8 @@ public readonly struct LocalAligner
         // We fill the arrays from right to left (backwards)
         int writeIndex = alignedRow.Length - 1;
         
+        int matches = 0, mismatches = 0, gaps = 0;
+        
         // Walk backwards until we hit a 0
         while (matrix[currR, currC] != 0)
         {
@@ -88,6 +90,10 @@ public readonly struct LocalAligner
             // Where did the score come from?
             if (currentScore == matrix[currR - 1, currC - 1] + matchScore)
             {
+                // This is for the identity percentage
+                if (rChar == cChar) matches++;
+                else mismatches++;
+                
                 // Came from diagonal: Match or Mismatch
                 alignedRow[writeIndex] = rChar;
                 alignedCol[writeIndex] = cChar;
@@ -96,6 +102,9 @@ public readonly struct LocalAligner
             }
             else if (currentScore == matrix[currR - 1, currC] + _gap)
             {
+                // This is for the identity percentage
+                gaps++;
+                
                 // Came from Up: Gap in the Column sequence
                 alignedRow[writeIndex] = rChar;
                 alignedCol[writeIndex] = '-';
@@ -103,6 +112,9 @@ public readonly struct LocalAligner
             }
             else
             {
+                // This is for the identity percentage
+                gaps++;
+                
                 // Came from Left: Gap in the Row sequence
                 alignedRow[writeIndex] = '-';
                 alignedCol[writeIndex] = cChar;
@@ -118,8 +130,11 @@ public readonly struct LocalAligner
         int length = alignedRow.Length - 1 - writeIndex;
         string finalRowSeq = new string(alignedRow.AsSpan(writeIndex + 1, length));
         string finalColSeq = new string(alignedCol.AsSpan(writeIndex + 1, length));
+
+        double identityPercentage = length == 0 ? 0 : Math.Round((double)matches / length * 100, 2);
         
-        return new AlignmentResult(maxGlobal, finalRowSeq, finalColSeq);
+        return new AlignmentResult(maxGlobal, finalRowSeq, finalColSeq, 
+            identityPercentage, matches, mismatches, gaps);
     }
 }
 
@@ -127,4 +142,5 @@ public readonly struct LocalAligner
 /// <summary>
 /// Represents the final computed local alignment between two sequences.
 /// </summary>
-public readonly record struct AlignmentResult(int Score, string AlignedRow, string AlignedCol);
+public readonly record struct AlignmentResult(int Score, string AlignedRow, string AlignedCol, 
+    double IdentityPercentage, int Matches, int Mismatches, int Gaps);

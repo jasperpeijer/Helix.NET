@@ -18,6 +18,11 @@ public class GenomicJob
     public string? AlignedSequenceA { get; set; }
     public string? AlignedSequenceB { get; set; }
     
+    public double? IdentityPercentage { get; set; }
+    public int? Matches { get; set; }
+    public int? Mismatches { get; set; }
+    public int? Gaps { get; set; }
+    
     // Telemetry
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }

@@ -1,0 +1,45 @@
+﻿@if (string.IsNullOrEmpty(SequenceA) || string.IsNullOrEmpty(SequenceB)) return;
+
+<div style="font-family: 'Courier New', monospace; background: #f4f4f4; color: #d4d4d4; padding: 20px; border-radius: 4px; overflow-x: auto;">
+    @for (int i = 0; i < SequenceA.Length; i += 60)
+    {
+        int length = Math.Min(60, SequenceA.Length - i);
+
+        string chunkA = SequenceA.Substring(i, length);
+        string chunkB = SequenceB.Substring(i, length);
+        
+        <div style="margin-bottom: 20px;">
+            <div style="color: #999; font-size: 0.75em; margin-bottom: 4px; font-weight: bold;">POS: @(i + 1)</div>
+            
+            <div style="white-space: pre; letter-spacing: 2px;">
+                @for (int c = 0; c < length; c++)
+                {
+                    bool match = chunkA[c] == chunkB[c];
+                    <span style="color: @GetColor(chunkA[c], chunkB[c]); font-weight: @(match ? "normal" : "bold");">@chunkA[c]</span>
+                }
+            </div>
+            
+            <div style="white-space: pre; letter-spacing: 2px;">
+                @for (int c = 0; c < length; c++)
+                {
+                    bool match = chunkA[c] == chunkB[c];
+                    <span style="color: @GetColor(chunkA[c], chunkB[c]); font-weight: @(match ? "normal" : "bold");">@chunkB[c]</span>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string SequenceA { get; set; } = string.Empty;
+    [Parameter] public string SequenceB { get; set; } = string.Empty;
+
+    private string GetColor(char current, char partner)
+    {
+        if (current == partner) return "#444";
+        
+        if (current == '-' || partner == '-') return "#6f42c1";
+        
+        return "#dc3545";
+    }
+}

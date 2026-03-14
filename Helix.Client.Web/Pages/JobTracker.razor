@@ -26,84 +26,12 @@ else if (_job.Status == "Completed")
         </a>
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
-        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="color: #888; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Identity</div>
-            <div style="font-size: 2rem; font-weight: bold; color: #333;">@_job.IdentityPercentage%</div>
-        </div>
-
-        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #555; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="color: #888; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Matches</div>
-            <div style="font-size: 2rem; font-weight: bold; color: #333;">@_job.Matches</div>
-        </div>
-
-        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #e74c3c; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="color: #888; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">SNPs (Mutations)</div>
-            <div style="font-size: 2rem; font-weight: bold; color: #333;">@_job.Mismatches</div>
-        </div>
-
-        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #8e44ad; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="color: #888; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Indels (Gaps)</div>
-            <div style="font-size: 2rem; font-weight: bold; color: #333;">@_job.Gaps</div>
-        </div>
-        
-        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 5px solid #57a894; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="color: #888; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Alignment Score</div>
-            <div style="font-size: 2rem; font-weight: bold; color: #333;">@_job.FinalScore</div>
-        </div>
-    </div>
+    <JobStatisticsGrid Job="_job" />
     
-    @* VISUAL DOT PLOT *@
-    <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 30px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h3 style="font-size: 1.2rem; color: #333; font-weight: bold; margin: 0;">Genomic Dot-Plot</h3>
-            
-            @* THE NEW DYNAMIC SLIDER *@
-            <div style="display: flex; align-items: center; gap: 15px; background: #eee; padding: 8px 15px; border-radius: 6px;">
-                <label for="kmerSlider" style="font-size: 0.9em; color: #444; margin: 0; font-weight: bold;">
-                    K-mer Size: <span style="color: #007bff;">@_kmerSize bp</span>
-                </label>
-                <input id="kmerSlider" type="range" min="5" max="50" step="1" 
-                       value="@_kmerSize"
-                       @oninput="HandleSliderDrag"
-                       @onchange="HandleSliderRelease"
-                       style="cursor: pointer; width: 150px;" />
-            </div>
-        </div>
-        
-        <div style="text-align: center;">
-            <canvas id="dotPlotCanvas" width="600" height="600" style="background: #fafafa; border: 1px solid #ccc; max-width: 100%; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);"></canvas>
-        </div>
-    </div>
+    <GenomicDotPlot SequenceA="@(_job.AlignedSequenceA)" SequenceB="@(_job.AlignedSequenceB)"></GenomicDotPlot>
     
     <div style="font-family: 'Courier New', monospace; background: #f4f4f4; color: #d4d4d4; padding: 20px; border-radius: 4px; overflow-x: auto;">
-        @for (int i = 0; i < _job.AlignedSequenceA.Length; i += 60)
-        {
-            int length = Math.Min(60, _job.AlignedSequenceA.Length - i);
-
-            string chunkA = _job.AlignedSequenceA.Substring(i, length);
-            string chunkB = _job.AlignedSequenceB.Substring(i, length);
-            
-            <div style="margin-bottom: 20px;">
-                <div style="color: #999; font-size: 0.75em; margin-bottom: 4px; font-weight: bold;">POS: @(i + 1)</div>
-                
-                <div style="white-space: pre; letter-spacing: 2px;">
-                    @for (int c = 0; c < length; c++)
-                    {
-                        bool match = chunkA[c] == chunkB[c];
-                        <span style="color: @GetColor(chunkA[c], chunkB[c]); font-weight: @(match ? "normal" : "bold");">@chunkA[c]</span>
-                    }
-                </div>
-                
-                <div style="white-space: pre; letter-spacing: 2px;">
-                    @for (int c = 0; c < length; c++)
-                    {
-                        bool match = chunkA[c] == chunkB[c];
-                        <span style="color: @GetColor(chunkA[c], chunkB[c]); font-weight: @(match ? "normal" : "bold");">@chunkB[c]</span>
-                    }
-                </div>
-            </div>
-        }
+        <AlignmentViewer SequenceA="@(_job.AlignedSequenceA)" SequenceB="@(_job.AlignedSequenceB)"></AlignmentViewer>
     </div>
 }
 else if (_job.Status == "Failed")
@@ -113,60 +41,11 @@ else if (_job.Status == "Failed")
     </div>
 }
 
-<script>
-    window.drawDotPlot = (canvasId, lines, lenA, lenB) => {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        const scaleX = canvas.width / lenA;
-        const scaleY = canvas.height / lenB;
-
-        ctx.strokeStyle = '#007bff'; // Helix Blue
-        ctx.lineWidth = 2; // Nice, visible lines like in your screenshot
-        ctx.lineCap = 'round';
-        
-        ctx.beginPath();
-        
-        // The array is packed as [x1, y1, x2, y2, x1, y1...]
-        // So we jump by 4 every loop
-        for (let i = 0; i < lines.length; i += 4) {
-            let x1 = lines[i] * scaleX;
-            let y1 = lines[i + 1] * scaleY;
-            let x2 = lines[i + 2] * scaleX;
-            let y2 = lines[i + 3] * scaleY;
-
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-        }
-        
-        // Paint all the lines to the screen at once (super fast)
-        ctx.stroke(); 
-    };
-</script>
-
 @code {
-    [Inject] private IJSRuntime JS { get; set; } = default!;
-    
     [Parameter] public Guid Id { get; set; }
 
     private JobResponse? _job;
     private string _statusMessage = "Connecting to compute cluster...";
-    
-    public class JobResponse
-    {
-        public Guid Id { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public int? FinalScore { get; set; }
-        public string? AlignedSequenceA { get; set; }
-        public string? AlignedSequenceB { get; set; }
-        public double? IdentityPercentage { get; set; }
-        public int? Matches { get; set; }
-        public int? Mismatches { get; set; }
-        public int? Gaps { get; set; }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -188,9 +67,6 @@ else if (_job.Status == "Failed")
                 {
                     // The UI will update first, putting the <canvas> in the DOM
                     StateHasChanged(); 
-                        
-                    // Then we draw the plot
-                    await GenerateDotPlotAsync();
                     break;
                 }
                 
@@ -238,106 +114,5 @@ else if (_job.Status == "Failed")
                               $">Sequence_B_Job_{Id}\n{WrapSequence(_job.AlignedSequenceB!)}";
 
         return $"data:text/plain;charset=utf-8,{Uri.EscapeDataString(fastaContent)}";
-    }
-
-    private string GetColor(char current, char partner)
-    {
-        if (current == partner) return "#444";
-        
-        if (current == '-' || partner == '-') return "#6f42c1";
-        
-        return "#dc3545";
-    }
-    
-    private int _kmerSize = 20;
-
-    private async Task GenerateDotPlotAsync()
-    {
-        if (_job == null || string.IsNullOrEmpty(_job.AlignedSequenceA)) return;
-
-        string rawA = _job.AlignedSequenceA.Replace("-", "");
-        string rawB = _job.AlignedSequenceB.Replace("-", "");
-
-        int windowSize = _kmerSize;
-        
-        // We will store line segments: [startX, startY, endX, endY]
-        var lineSegments = new List<double>();
-
-        await Task.Run(() =>
-        {
-            var kmerIndex = new Dictionary<string, List<int>>();
-
-            // Pass 1: Build the Dictionary
-            for (int i = 0; i <= rawA.Length - windowSize; i++)
-            {
-                string kmer = rawA.Substring(i, windowSize);
-                if (!kmerIndex.ContainsKey(kmer)) kmerIndex[kmer] = new List<int>();
-                kmerIndex[kmer].Add(i);
-            }
-
-            // Track how far we've drawn on any given diagonal to prevent redrawing
-            // Diagonal ID = X - Y
-            var coveredDiagonals = new Dictionary<int, int>();
-
-            // Pass 2: Find matches and EXTEND them into lines
-            for (int j = 0; j <= rawB.Length - windowSize; j++)
-            {
-                string kmer = rawB.Substring(j, windowSize);
-                
-                if (kmerIndex.TryGetValue(kmer, out var xPositions))
-                {
-                    foreach (int x in xPositions)
-                    {
-                        int diagonalId = x - j;
-
-                        // If we are already in the middle of a line we previously drew, skip!
-                        if (coveredDiagonals.TryGetValue(diagonalId, out int maxJ) && j <= maxJ)
-                        {
-                            continue;
-                        }
-
-                        // K-mer Extension: Keep walking forward until a mismatch occurs
-                        int len = windowSize;
-                        while (x + len < rawA.Length && j + len < rawB.Length && rawA[x + len] == rawB[j + len])
-                        {
-                            len++;
-                        }
-
-                        // Add the coordinates for the line segment
-                        lineSegments.Add(x);           // X1
-                        lineSegments.Add(j);           // Y1
-                        lineSegments.Add(x + len);     // X2
-                        lineSegments.Add(j + len);     // Y2
-
-                        // Mark this section of the diagonal as fully covered
-                        coveredDiagonals[diagonalId] = j + len - 1;
-                    }
-                }
-            }
-        });
-
-        // Pass the array and the original lengths to JS for precise scaling
-        if (lineSegments.Any())
-        {
-            await JS.InvokeVoidAsync("drawDotPlot", "dotPlotCanvas", lineSegments.ToArray(), rawA.Length, rawB.Length);
-        }
-    }
-    
-    private void HandleSliderDrag(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int val))
-        {
-            _kmerSize = val;
-        }
-    }
-
-    // Fires only when the user lets go of the mouse click
-    private async Task HandleSliderRelease(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out int val))
-        {
-            _kmerSize = val;
-            await GenerateDotPlotAsync();
-        }
     }
 }
