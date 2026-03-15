@@ -1,19 +1,21 @@
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using Helix.API;
 using Helix.API.Data;
-using Helix.API.Workers;
 using Helix.CoreEngine;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// REGISTER CUSTOM SERVICES
 builder.Services.AddScoped<Helix.API.Services.JobLimitService>();
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// REGISTER SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -39,13 +41,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// REGISTER DATABASE STUFF
 builder.Services.AddDbContext<HelixDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register constant check for pending jobs
-builder.Services.AddHostedService<AlignmentEngineWorker>();
 
-// Add CORS policy to allow the Blazor client to communicate with this API
+// REGISTER CORS POLICY
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
@@ -56,11 +57,13 @@ builder.Services.AddCors(options =>
     });
 });
 
+// REGISTER AUTHORIZATION & AUTHENTICATION
 builder.Services.AddAuthorization();
 
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<HelixDbContext>();
 
+// APP CONFIG
 var app = builder.Build();
 
 app.UseCors("AllowBlazorClient");
@@ -69,14 +72,13 @@ app.UseAuthorization();
 
 app.MapIdentityApi<ApplicationUser>();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// POST: Submit a new alignment job
+// ENDPOINTS
 app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobRequest jobRequest, HelixDbContext db,
         ClaimsPrincipal user, Helix.API.Services.JobLimitService jobLimitService) => 
 {
@@ -87,7 +89,6 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobReq
         return Results.Unauthorized();
     }
     
-    // Check if user has reached monthly limit
     var limitCheck = await jobLimitService.CheckLimitAsync(userId);
 
     if (!limitCheck.CanSubmit)
@@ -95,7 +96,6 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobReq
         return Results.Problem(detail: limitCheck.Message, statusCode: StatusCodes.Status429TooManyRequests);
     }
     
-    // 1. Create the database record
     var job = new SmithWatermanAlignmentJob
     {
         Id = Guid.NewGuid(),
@@ -106,12 +106,37 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobReq
         UserId = userId
     };
     
-    // 2. Save it to the database
     db.SmithWatermanAlignmentJobs.Add(job);
     await db.SaveChangesAsync();
     
-    // 3. Return the Tracking ID immediately
-    // HTTP 202 Accepted means: "I received your data, and I will process it later."
+    // RABBITMQ
+    var factory = new ConnectionFactory { HostName = "127.0.0.1" };
+    
+    await using var connection = await factory.CreateConnectionAsync();
+    await using var channel = await connection.CreateChannelAsync();
+
+    await channel.QueueDeclareAsync(
+        queue: "smith_waterman_alignment_jobs",
+        durable: true,
+        exclusive: false,
+        autoDelete: false,
+        arguments: null
+    );
+    
+    var messagePayload = new { JobId = job.Id };
+    var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(messagePayload));
+
+    var properties = new BasicProperties
+    {
+        Persistent = true,
+    };
+    
+    await channel.BasicPublishAsync(
+        exchange: string.Empty,
+        routingKey: "alignment_jobs",
+        body: body
+    );
+    
     return Results.Accepted($"/api/v1/align/jobs/{job.Id}", new { Id = job.Id, Status = job.Status });
 })
 .WithName("SubmitAlignmentJob")

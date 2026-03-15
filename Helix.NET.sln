@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Helix.API", "Helix.API\Heli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Helix.Client.Web", "Helix.Client.Web\Helix.Client.Web.csproj", "{B297CFBC-53D0-4158-82F4-8AD1D29B9FAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Helix.Worker", "Helix.Worker\Helix.Worker.csproj", "{09A22891-A9B1-4439-ABBD-840C701DE9B0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{B297CFBC-53D0-4158-82F4-8AD1D29B9FAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B297CFBC-53D0-4158-82F4-8AD1D29B9FAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B297CFBC-53D0-4158-82F4-8AD1D29B9FAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09A22891-A9B1-4439-ABBD-840C701DE9B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09A22891-A9B1-4439-ABBD-840C701DE9B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09A22891-A9B1-4439-ABBD-840C701DE9B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09A22891-A9B1-4439-ABBD-840C701DE9B0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
