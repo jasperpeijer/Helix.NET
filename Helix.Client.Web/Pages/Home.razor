@@ -2,6 +2,8 @@
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject NavigationManager Nav
+@inject Helix.Client.Web.Services.AuthService AuthService
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
 
 <PageTitle>Helix.NET Dashboard</PageTitle>
 
@@ -44,7 +46,7 @@
     
     public record AlignmentRequest(string SequenceA, string SequenceB);
 
-    public class JobResponse
+    public class SmithWatermanAlignmentJobResponse
     {
         public Guid Id { get; set; }
         public string Status { get; set; } = string.Empty;
@@ -65,17 +67,17 @@
         try
         {
             var payload = new AlignmentRequest(_sequenceA, _sequenceB);
-            string apiUrl = "https://localhost:7096/api/v1/align/jobs";
-            var postResponse = await Http.PostAsJsonAsync(apiUrl, payload);
-
-            if (!postResponse.IsSuccessStatusCode)
+            
+            var response = await Http.PostAsJsonAsync("/api/v1/align/jobs", payload);
+            
+            if (!response.IsSuccessStatusCode)
             {
                 _statusMessage = "Network Error: API rejected payload.";
                 _isProcessing = false;
                 return;
             }
 
-            var initialJob = await postResponse.Content.ReadFromJsonAsync<JobResponse>();
+            var initialJob = await response.Content.ReadFromJsonAsync<SmithWatermanAlignmentJobResponse>();
 
             if (initialJob == null) return;
 

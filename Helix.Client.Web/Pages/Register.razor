@@ -1,0 +1,84 @@
+﻿@page "/register"
+@inject Helix.Client.Web.Services.AuthService AuthService
+@inject NavigationManager NavManager
+@inject Helix.Client.Web.Services.ApiAuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Register - Helix.NET</PageTitle>
+
+<div style="max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; color: #333; margin-bottom: 20px;">Create an Account</h2>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div style="padding: 10px; margin-bottom: 15px; background: #f8d7da; color: #721c24; border-radius: 4px;">
+            @_errorMessage
+        </div>
+    }
+    
+    @if (_isSuccess)
+    {
+        <div style="padding: 10px; margin-bottom: 15px; background: #d4edda; color: #155724; border-radius: 4px;">
+            Account created successfully! Redirecting to login...
+        </div>
+    }
+
+    <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Email</label>
+        <input type="email" @bind="_email" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" />
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Password</label>
+        <input type="password" @bind="_password" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" />
+        <small style="color: #666; font-size: 12px;">Requires 1 uppercase, 1 number, and 1 special character.</small>
+    </div>
+
+    <button @onclick="HandleRegister" disabled="@_isLoading" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+        @(_isLoading ? "Creating Account..." : "Register")
+    </button>
+    
+    <div style="text-align: center; margin-top: 15px;">
+        <a href="/login" style="color: #007bff; text-decoration: none;">Already have an account? Sign In</a>
+    </div>
+</div>
+
+@code {
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string _errorMessage = string.Empty;
+    private bool _isSuccess = false;
+    private bool _isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        _errorMessage = string.Empty;
+        _isLoading = true;
+
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+        {
+            _errorMessage = "Please enter both an email and a password.";
+            _isLoading = false;
+            return;
+        }
+
+        bool success = await AuthService.RegisterAsync(_email, _password);
+
+        if (success)
+        {
+            _isSuccess = true;
+            StateHasChanged(); // Force the UI to show the green success box
+            
+            AuthStateProvider.MarkUserAsAuthenticated();
+            
+            // Wait 1.5 seconds so the user can read the message, then bounce them to login
+            await Task.Delay(1500); 
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = "Registration failed. Ensure your password meets the complexity requirements or try a different email.";
+        }
+        
+        _isLoading = false;
+    }
+}
