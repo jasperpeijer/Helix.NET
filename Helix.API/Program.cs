@@ -118,10 +118,17 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobReq
 .WithOpenApi()
 .RequireAuthorization();
 
-app.MapGet("/api/v1/align/jobs", async (HelixDbContext db) =>
+app.MapGet("/api/v1/align/jobs", async (HelixDbContext db, ClaimsPrincipal user) =>
 {
-    return await db.SmithWatermanAlignmentJobs
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+
+    var jobs = await db.SmithWatermanAlignmentJobs
+        // 2. Filter the database rows FIRST using the full model
+        .Where(j => j.UserId == userId)
+        // 3. Sort the filtered rows
         .OrderByDescending(job => job.CreatedAt)
+        // 4. FINALLY, project the exact columns you want to send to the client
         .Select(job => new
         {
             job.Id,
@@ -131,23 +138,32 @@ app.MapGet("/api/v1/align/jobs", async (HelixDbContext db) =>
             job.FinalScore
         })
         .ToListAsync();
+    
+    return Results.Ok(jobs);
 })
 .WithName("GetAlignmentJobs")
-.WithOpenApi();
+.WithOpenApi()
+.RequireAuthorization();
 
 // GET: Check the status of a specific job
-app.MapGet("/api/v1/align/jobs/{id:guid}", async (Guid id, HelixDbContext db) =>
+app.MapGet("/api/v1/align/jobs/{id:guid}", async (Guid id, HelixDbContext db, ClaimsPrincipal user) =>
 {
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+    
     var job = await db.SmithWatermanAlignmentJobs.FindAsync(id);
-
+    
     if (job == null)
     {
         return Results.NotFound(new { Error = "Job not found. Please double check your job ID" });
     }
+    
+    if (job.UserId != userId) return Results.Unauthorized();
 
     return Results.Ok(job);
 })
 .WithName("GetAlignmentJobStatus")
-.WithOpenApi();
+.WithOpenApi()
+.RequireAuthorization();
 
 app.Run();

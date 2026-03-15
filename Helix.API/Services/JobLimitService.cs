@@ -23,13 +23,13 @@ public class JobLimitService
         var now = DateTime.UtcNow;
         var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         
-        var thisMonthJobs = await _db.SmithWatermanAlignmentJobs
+        var thisMonthsJobs = await _db.SmithWatermanAlignmentJobs
             .CountAsync(job => job.UserId == userId && job.CreatedAt >= startOfMonth && job.CreatedAt <= now);
 
-        if (thisMonthJobs >= monthlyLimit)
+        if (thisMonthsJobs >= monthlyLimit)
         {
             return (false,
-                "$\"Monthly limit exceeded. Your {user.SubscriptionTier} tier allows {monthlyLimit} jobs per month. You have used {thisMonthsJobs} in {now:MMMM}. Limits reset on the 1st of next month.\"");
+                $"Monthly limit exceeded. Your {user.SubscriptionTier} tier allows {monthlyLimit} jobs per month. You have used {thisMonthsJobs} in {now:MMMM}. Limits reset on the 1st of next month.");
         }
         
         return (true, "Limit check passed.");
