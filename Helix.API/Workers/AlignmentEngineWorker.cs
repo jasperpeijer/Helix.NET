@@ -1,21 +1,15 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Helix.API.Data;
+﻿using Helix.API.Data;
 using Helix.CoreEngine;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace Helix.API.Workers;
 
-public class AlignmentWorker : BackgroundService
+public class AlignmentEngineWorker : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<AlignmentWorker> _logger;
+    private readonly ILogger<AlignmentEngineWorker> _logger;
     
-    public AlignmentWorker(IServiceProvider serviceProvider, ILogger<AlignmentWorker> logger)
+    public AlignmentEngineWorker(IServiceProvider serviceProvider, ILogger<AlignmentEngineWorker> logger)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -33,7 +27,7 @@ public class AlignmentWorker : BackgroundService
             var db = scope.ServiceProvider.GetRequiredService<HelixDbContext>();
             
             // 2. Find the oldest "Pending" job in PostgreSQL
-            var job = await db.GenomicJobs
+            var job = await db.SmithWatermanAlignmentJobs
                 .FirstOrDefaultAsync(j => j.Status == "Pending", stoppingToken);
 
             if (job != null)
@@ -90,7 +84,7 @@ public class AlignmentWorker : BackgroundService
         var seqB = new GenomicSequence(sequenceB.AsSpan());
         
         var matrix = new ScoringMatrix(seqA.Length + 1, seqB.Length + 1);
-        var aligner = new LocalAligner(3, -3, -2);
+        var aligner = new SmithWatermanAligner(3, -3, -2);
         
         return aligner.ComputeAlignment(seqA, seqB, ref matrix);
     }

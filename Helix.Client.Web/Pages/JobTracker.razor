@@ -26,9 +26,7 @@ else if (_job.Status == "Completed")
         </a>
     </div>
     
-    <JobStatisticsGrid Job="_job" />
-    
-    <GenomicDotPlot SequenceA="@(_job.AlignedSequenceA)" SequenceB="@(_job.AlignedSequenceB)"></GenomicDotPlot>
+    <JobStatisticsGrid SmithWatermanAlignmentJob="_job" />
     
     <div style="font-family: 'Courier New', monospace; background: #f4f4f4; color: #d4d4d4; padding: 20px; border-radius: 4px; overflow-x: auto;">
         <AlignmentViewer SequenceA="@(_job.AlignedSequenceA)" SequenceB="@(_job.AlignedSequenceB)"></AlignmentViewer>
@@ -44,7 +42,7 @@ else if (_job.Status == "Failed")
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private JobResponse? _job;
+    private SmithWatermanAlignmentJobResponse? _job;
     private string _statusMessage = "Connecting to compute cluster...";
 
     protected override async Task OnInitializedAsync()
@@ -55,7 +53,7 @@ else if (_job.Status == "Failed")
         {
             try
             {
-                _job = await Http.GetFromJsonAsync<JobResponse>($"{apiUrl}/{Id}");
+                _job = await Http.GetFromJsonAsync<SmithWatermanAlignmentJobResponse>($"{apiUrl}/{Id}");
 
                 if (_job == null)
                 {

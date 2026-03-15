@@ -3,7 +3,7 @@
 /// <summary>
 /// Executes the Smith-Waterman local sequence alignment algorithm.
 /// </summary>
-public readonly struct LocalAligner
+public readonly struct SmithWatermanAligner
 {
     private readonly int _match;
     private readonly int _mismatch;
@@ -12,7 +12,7 @@ public readonly struct LocalAligner
     /// <summary>
     /// Executes the Smith-Waterman local sequence alignment algorithm.
     /// </summary>
-    public LocalAligner(int matchScore, int mismatchPenalty, int gapPenalty)
+    public SmithWatermanAligner(int matchScore, int mismatchPenalty, int gapPenalty)
     {
         _match = matchScore;
         _mismatch = mismatchPenalty > 0 ? -mismatchPenalty : mismatchPenalty;

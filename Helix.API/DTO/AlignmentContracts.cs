@@ -1,6 +1,6 @@
 ﻿namespace Helix.API;
 
-public record AlignmentRequest(
+public record SmithWatermanAlignmentJobRequest(
     string SequenceA,
     string SequenceB,
     int MatchScore = 3,
@@ -8,7 +8,7 @@ public record AlignmentRequest(
     int GapPenalty = -2
 );
 
-public record AlignmentResponse(
+public record SmithWatermanAlignmentJobResponse(
     int Score,
     string AlignedSequenceA,
     string AlignedSequenceB

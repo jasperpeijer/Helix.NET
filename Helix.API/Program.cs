@@ -2,21 +2,45 @@ using Helix.API;
 using Helix.API.Data;
 using Helix.API.Workers;
 using Helix.CoreEngine;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer' [space] and then your token. Example: \"Bearer eyJhb...\""
+    });
+    
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 builder.Services.AddDbContext<HelixDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register constant check for pending jobs
-builder.Services.AddHostedService<AlignmentWorker>();
+builder.Services.AddHostedService<AlignmentEngineWorker>();
 
 // Add CORS policy to allow the Blazor client to communicate with this API
 builder.Services.AddCors(options =>
@@ -29,9 +53,18 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddAuthorization();
+
+builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+    .AddEntityFrameworkStores<HelixDbContext>();
+
 var app = builder.Build();
 
 app.UseCors("AllowBlazorClient");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapIdentityApi<ApplicationUser>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -41,20 +74,20 @@ if (app.Environment.IsDevelopment())
 }
 
 // POST: Submit a new alignment job
-app.MapPost("/api/v1/align/jobs", async ([FromBody] AlignmentRequest request, HelixDbContext db) => 
+app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobRequest jobRequest, HelixDbContext db) => 
 {
     // 1. Create the database record
-    var job = new GenomicJob
+    var job = new SmithWatermanAlignmentJob
     {
         Id = Guid.NewGuid(),
-        SequenceA = request.SequenceA,
-        SequenceB = request.SequenceB,
+        SequenceA = jobRequest.SequenceA,
+        SequenceB = jobRequest.SequenceB,
         Status = "Pending",
         CreatedAt = DateTime.UtcNow,
     };
     
     // 2. Save it to the database
-    db.GenomicJobs.Add(job);
+    db.SmithWatermanAlignmentJobs.Add(job);
     await db.SaveChangesAsync();
     
     // 3. Return the Tracking ID immediately
@@ -62,11 +95,12 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] AlignmentRequest request, He
     return Results.Accepted($"/api/v1/align/jobs/{job.Id}", new { Id = job.Id, Status = job.Status });
 })
 .WithName("SubmitAlignmentJob")
-.WithOpenApi();
+.WithOpenApi()
+.RequireAuthorization();
 
 app.MapGet("/api/v1/align/jobs", async (HelixDbContext db) =>
 {
-    return await db.GenomicJobs
+    return await db.SmithWatermanAlignmentJobs
         .OrderByDescending(job => job.CreatedAt)
         .Select(job => new
         {
@@ -84,7 +118,7 @@ app.MapGet("/api/v1/align/jobs", async (HelixDbContext db) =>
 // GET: Check the status of a specific job
 app.MapGet("/api/v1/align/jobs/{id:guid}", async (Guid id, HelixDbContext db) =>
 {
-    var job = await db.GenomicJobs.FindAsync(id);
+    var job = await db.SmithWatermanAlignmentJobs.FindAsync(id);
 
     if (job == null)
     {

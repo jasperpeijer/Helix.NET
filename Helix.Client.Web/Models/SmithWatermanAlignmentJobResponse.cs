@@ -1,6 +1,6 @@
 ﻿namespace Helix.Client.Web.Models;
 
-public class JobResponse
+public class SmithWatermanAlignmentJobResponse
 {
     public Guid Id { get; set; }
     public string Status { get; set; } = string.Empty;

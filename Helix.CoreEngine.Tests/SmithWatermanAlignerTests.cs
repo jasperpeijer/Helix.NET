@@ -4,7 +4,7 @@ using Helix.CoreEngine;
 
 namespace Helix.CoreEngine.Tests;
 
-public class LocalAlignerTests
+public class SmithWatermanAlignerTests
 {
     [Fact]
     public void ComputeAlignment_FindsOptimalLocalIsland()
@@ -18,7 +18,7 @@ public class LocalAlignerTests
         var matrix = new ScoringMatrix(seq1.Length + 1, seq2.Length + 1);
         
         // Set up the biological scoring parameters
-        var aligner = new LocalAligner(matchScore: 3, mismatchPenalty: -3, gapPenalty: -2);
+        var aligner = new SmithWatermanAligner(matchScore: 3, mismatchPenalty: -3, gapPenalty: -2);
         
         // Act
         var result = aligner.ComputeAlignment(seq1, seq2, ref matrix);
@@ -39,7 +39,7 @@ public class LocalAlignerTests
         var seq1 = new GenomicSequence("GATA".AsSpan());
         var seq2 = new GenomicSequence("GATCA".AsSpan());
         var matrix = new ScoringMatrix(seq1.Length + 1, seq2.Length + 1);
-        var aligner = new LocalAligner(matchScore: 3, mismatchPenalty: -3, gapPenalty: -2);
+        var aligner = new SmithWatermanAligner(matchScore: 3, mismatchPenalty: -3, gapPenalty: -2);
         
         // Act
         var result = aligner.ComputeAlignment(seq1, seq2, ref matrix);
