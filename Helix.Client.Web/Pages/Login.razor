@@ -1,0 +1,53 @@
+﻿@page "/login"
+@inject Helix.Client.Web.Services.AuthService AuthService
+@inject NavigationManager NavManager
+
+<PageTitle>Login - Helix.NET</PageTitle>
+
+<div style="max-width: 400px; margin: 50px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; color: #333; margin-bottom: 20px;">Sign In</h2>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div style="padding: 10px; margin-bottom: 15px; background: #f8d7da; color: #721c24; border-radius: 4px;">
+            @_errorMessage
+        </div>
+    }
+
+    <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Email</label>
+        <input type="email" @bind="_email" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" />
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #555;">Password</label>
+        <input type="password" @bind="_password" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" />
+    </div>
+
+    <button @onclick="HandleLogin" style="width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+        Login
+    </button>
+</div>
+
+@code {
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string _errorMessage = string.Empty;
+
+    private async Task HandleLogin()
+    {
+        _errorMessage = string.Empty; // Clear old errors
+
+        bool success = await AuthService.LoginAsync(_email, _password);
+
+        if (success)
+        {
+            // If it works, redirect them to the home page so they can submit a job!
+            NavManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = "Invalid email or password.";
+        }
+    }
+}

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Helix.API;
 using Helix.API.Data;
 using Helix.API.Workers;
@@ -8,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<Helix.API.Services.JobLimitService>();
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -74,8 +77,24 @@ if (app.Environment.IsDevelopment())
 }
 
 // POST: Submit a new alignment job
-app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobRequest jobRequest, HelixDbContext db) => 
+app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobRequest jobRequest, HelixDbContext db,
+        ClaimsPrincipal user, Helix.API.Services.JobLimitService jobLimitService) => 
 {
+    var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+    
+    // Check if user has reached monthly limit
+    var limitCheck = await jobLimitService.CheckLimitAsync(userId);
+
+    if (!limitCheck.CanSubmit)
+    {
+        return Results.Problem(detail: limitCheck.Message, statusCode: StatusCodes.Status429TooManyRequests);
+    }
+    
     // 1. Create the database record
     var job = new SmithWatermanAlignmentJob
     {
@@ -84,6 +103,7 @@ app.MapPost("/api/v1/align/jobs", async ([FromBody] SmithWatermanAlignmentJobReq
         SequenceB = jobRequest.SequenceB,
         Status = "Pending",
         CreatedAt = DateTime.UtcNow,
+        UserId = userId
     };
     
     // 2. Save it to the database
